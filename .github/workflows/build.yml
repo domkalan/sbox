@@ -1,0 +1,44 @@
+name: Build Sbox
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Verify formatting
+        run: dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- format --verify
+
+      - name: Build
+        run: dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- build --config Developer
+
+      - name: Test
+        run: dotnet run --project .\engine\Tools\SboxBuild\SboxBuild.csproj -- test
+
+      - name: Upload game folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbox-game
+          path: game/
+          if-no-files-found: error
