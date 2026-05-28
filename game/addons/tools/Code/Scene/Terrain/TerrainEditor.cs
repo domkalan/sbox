@@ -76,30 +76,6 @@ public class TerrainEditorTool : EditorTool
 			group.Add( opacityRow );
 		}
 
-		// Active Layer
-		{
-			var group = sidebar.AddGroup( "Active Layer" );
-
-			var tabs = new TabWidget( sidebar );
-			tabs.MaximumHeight = 40;
-			tabs.StateCookie = "TerrainEditorTool.Tabs";
-
-			var basePage = new Widget();
-			var overlayPage = new Widget();
-
-			tabs.AddPage( "Base", "layers", basePage );
-			tabs.AddPage( "Overlay", "landscape", overlayPage );
-
-			var tabBar = tabs.Children.OfType<SegmentedControl>().FirstOrDefault();
-			tabBar.OnSelectedChanged += ( selectedName ) =>
-			{
-				PaintTextureTool.ActiveLayer = selectedName == "Base" ? TerrainLayer.Base : TerrainLayer.Overlay;
-				SetOpacityToolTip( opacityRow );
-			};
-
-			group.Add( tabs );
-		}
-
 		SetOpacityToolTip( opacityRow );
 
 		// Material selection
@@ -167,12 +143,8 @@ public class TerrainEditorTool : EditorTool
 
 	static void SetOpacityToolTip( ControlSheetRow row )
 	{
-		var isOverlay = PaintTextureTool.ActiveLayer == TerrainLayer.Overlay;
-		var tip = isOverlay
-			? "Controls blend strength when painting overlay layers"
-			: "Opacity is only supported when painting overlay layers";
-
-		row.Enabled = isOverlay;
+		var tip = "Controls how strongly the selected material is painted";
+		row.Enabled = true;
 		row.ToolTip = tip;
 		row.ControlWidget.ToolTip = tip;
 	}
