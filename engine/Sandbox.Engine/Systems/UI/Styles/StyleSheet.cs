@@ -28,6 +28,8 @@ public class StyleSheet
 	public Dictionary<string, KeyFrames> KeyFrames = new Dictionary<string, KeyFrames>( StringComparer.OrdinalIgnoreCase );
 	public Dictionary<string, MixinDefinition> Mixins = new Dictionary<string, MixinDefinition>( StringComparer.OrdinalIgnoreCase );
 
+	internal GlobalContext Context { get; private set; }
+
 	/// <summary>
 	/// Releases the filesystem watcher so we won't get file changed events.
 	/// </summary>
@@ -40,13 +42,15 @@ public class StyleSheet
 	public static StyleSheet FromFile( string filename, IEnumerable<(string key, string value)> variables = null, bool failSilently = false )
 	{
 		filename = BaseFileSystem.NormalizeFilename( filename );
+		var context = GlobalContext.Current;
 
-		var alreadyLoaded = Loaded.FirstOrDefault( x => x.FileName == filename );
+		var alreadyLoaded = Loaded.FirstOrDefault( x => x.FileName == filename && ReferenceEquals( x.Context, context ) );
 		if ( alreadyLoaded != null )
 			return alreadyLoaded;
 
 		var sheet = new StyleSheet();
-		sheet.UpdateFromFile( filename, failSilently );
+		sheet.Context = context;
+		sheet.UpdateFromFile( filename, failSilently, context );
 
 		sheet.AddVariables( variables );
 		sheet.FileName = filename;
@@ -96,7 +100,10 @@ public class StyleSheet
 			var text = ctx.FileMount.ReadAllText( name );
 			if ( text is null ) throw new System.IO.FileNotFoundException( "File not found", name );
 
-			return UpdateFromString( text, name, failSilently );
+			using ( new GlobalContext.GlobalContextScope( ctx ) )
+			{
+				return UpdateFromString( text, name, failSilently );
+			}
 		}
 		catch ( Exception e )
 		{
@@ -158,7 +165,7 @@ public class StyleSheet
 		// Store the current context to pass through to the watcher because
 		// we might be in a different scope later, and won't be able to find the files
 		//
-		var context = GlobalContext.Current;
+		var context = Context ?? GlobalContext.Current;
 
 		Watcher = context.FileMount.Watch();
 		Watcher.OnChanges += x =>
